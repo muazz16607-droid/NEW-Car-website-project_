@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, displayName, photoURL, role, createdAt
+    //
+    // Collection: cars
+    // Fields: sellerUid, title, brand, model, year, price, mileage, fuelType, transmission, location, description, images, category, status, createdAt
+    //
+    // Collection: chats
+    // Fields: participants (array of UIDs), carId, lastMessage, updatedAt
+    //
+    // Collection: messages (subcollection of chats)
+    // Fields: senderUid, text, createdAt
+    // Collection: settings
+    // Fields: contactEmail, contactPhone, contactAddress, facebookUrl, twitterUrl, instagramUrl
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "muazz16607@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['user', 'admin'];
+    }
+
+    function isValidCar(data) {
+      return data.keys().hasAll(['sellerUid', 'title', 'brand', 'model', 'year', 'price', 'mileage', 'images', 'status', 'createdAt']) &&
+             data.sellerUid is string &&
+             data.title is string && data.title.size() < 100 &&
+             data.price is number && data.price >= 0 &&
+             data.mileage is number && data.mileage >= 0 &&
+             data.images is list &&
+             data.status is string &&
+             data.createdAt is string;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == 'user';
+      allow update: if (isOwner(userId) || isAdmin()) && isValidUser(request.resource.data) && 
+                    (isAdmin() || request.resource.data.role == resource.data.role);
+    }
+
+    match /cars/{carId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidCar(request.resource.data);
+      allow update: if isAdmin() && isValidCar(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participants;
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.participants;
+      
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow create: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants && request.resource.data.senderUid == request.auth.uid;
+      }
+    }
+  }
+}

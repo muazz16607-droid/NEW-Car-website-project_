@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Car": {
+      "title": "Car",
+      "description": "Car listing details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sellerUid": { "type": "string" },
+        "title": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "year": { "type": "number" },
+        "price": { "type": "number" },
+        "mileage": { "type": "number" },
+        "fuelType": { "type": "string" },
+        "transmission": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "sold"] },
+        "virtualTour": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["360", "video"] },
+            "exteriorUrl": { "type": "string" },
+            "interiorUrl": { "type": "string" },
+            "videoUrl": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sellerUid", "title", "brand", "model", "year", "price"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Chat session between buyer and seller",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "carId": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants", "carId"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Individual chat message",
+      "type": "object",
+      "properties": {
+        "senderUid": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderUid", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/cars/{carId}": { "schema": "Car", "description": "Car listings" },
+    "/chats/{chatId}": { "schema": "Chat", "description": "Chat sessions" },
+    "/chats/{chatId}/messages/{messageId}": { "schema": "Message", "description": "Messages in a chat" }
+  }
+}
